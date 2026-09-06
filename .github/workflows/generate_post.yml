@@ -1,0 +1,60 @@
+name: Generate Plant Post
+
+on:
+  workflow_dispatch:
+    inputs:
+      plant:
+        description: 'Plant name (e.g. Rosella or Hibiscus sabdariffa)'
+        required: true
+        default: 'Hibiscus sabdariffa'
+      download_image:
+        description: 'Download image? true/false'
+        required: false
+        default: 'true'
+      length:
+        description: 'short|medium|long'
+        required: false
+        default: 'medium'
+      voice:
+        description: 'we|i'
+        required: false
+        default: 'we'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
+
+      - name: Run generator
+        env:
+          PLANT: ${{ github.event.inputs.plant }}
+          DOWNLOAD_IMAGE: ${{ github.event.inputs.download_image }}
+          LENGTH: ${{ github.event.inputs.length }}
+          VOICE: ${{ github.event.inputs.voice }}
+        run: |
+          ARGS="$PLANT --length $LENGTH --voice $VOICE"
+          if [ "${DOWNLOAD_IMAGE,,}" = "true" ]; then
+            ARGS="$ARGS --download-image"
+          fi
+          echo "Running: python plant_post_generator.py $ARGS"
+          python plant_post_generator.py $ARGS || true
+
+      - name: Upload generated files
+        uses: actions/upload-artifact@v3
+        with:
+          name: plant-post
+          path: |
+            *.md
+            *.jpg
+            *.jpeg
+            *.png
